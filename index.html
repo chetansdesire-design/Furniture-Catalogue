@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>URBAN CASA | Catalogue</title>
+    <style>
+        :root {
+            --glass: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        
+        body { 
+            background: linear-gradient(135deg, #1a1a2e, #16213e); 
+            min-height: 100vh;
+            color: var(--text);
+            padding-bottom: 50px;
+        }
+
+        /* Header with Premium Branding */
+        header { padding: 40px 20px 20px; text-align: center; }
+        header h1 { font-size: 28px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 5px; }
+        header p { font-size: 12px; opacity: 0.7; letter-spacing: 2px; text-transform: uppercase; }
+        
+        .settings-btn { 
+            position: fixed; top: 20px; right: 20px; 
+            background: var(--glass); border: 1px solid var(--glass-border);
+            padding: 10px; border-radius: 50%; cursor: pointer; backdrop-filter: blur(10px);
+        }
+
+        /* Glass Tiles */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
+        .tile { 
+            background: var(--glass); backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border); border-radius: 20px;
+            overflow: hidden; text-decoration: none; color: white;
+            transition: transform 0.3s ease;
+        }
+        .tile:active { transform: scale(0.95); }
+        .tile img { width: 100%; height: 120px; object-fit: cover; }
+        .tile p { padding: 10px; text-align: center; font-size: 13px; font-weight: 500; }
+
+        /* Modal Styles */
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; padding: 20px; overflow-y: auto; color: #333; }
+        .modal-content { background: white; padding: 20px; border-radius: 20px; }
+        .edit-row { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>URBAN CASA</h1>
+    <p>Timeless furniture for modern living</p>
+</header>
+
+<div class="settings-btn" onclick="toggleModal(true)">⚙️</div>
+
+<div class="grid" id="tileGrid"></div>
+
+<div id="modal">
+    <div class="modal-content">
+        <h2>Catalogue Manager</h2>
+        <div style="margin: 20px 0; padding: 15px; background: #eee; text-align: center; border-radius: 10px; font-weight: bold;" onclick="addProduct()">+ Add New Product</div>
+        <div id="editorInputs"></div>
+        <button onclick="saveAndClose()" style="width:100%; padding:15px; background:#1a1a2e; color:white; border:none; border-radius:10px;">Save Changes</button>
+    </div>
+</div>
+
+<script>
+    let data = JSON.parse(localStorage.getItem('urbanCasaData')) || [
+        {name: "Kitchen", img: "", link: "#"},
+        {name: "Wardrobe", img: "", link: "#"}
+    ];
+
+    function render() {
+        const grid = document.getElementById('tileGrid');
+        grid.innerHTML = data.map(item => `
+            <a href="${item.link}" class="tile" target="_blank">
+                <img src="${item.img || 'https://via.placeholder.com/150'}">
+                <p>${item.name}</p>
+            </a>
+        `).join('');
+
+        const editor = document.getElementById('editorInputs');
+        editor.innerHTML = data.map((item, i) => `
+            <div class="edit-row">
+                <div onclick="document.getElementById('file-${i}').click()" style="width: 60px; height: 60px; background: #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 5px;">
+                    <img src="${item.img || ''}" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+                <input type="file" id="file-${i}" hidden accept="image/*" onchange="handleImage(this, ${i})">
+                <input type="text" value="${item.name}" placeholder="Name" oninput="data[${i}].name=this.value">
+                <input type="text" value="${item.link}" placeholder="Google Drive Link" oninput="data[${i}].link=this.value">
+                <button onclick="data.splice(${i},1); render()" style="color:red; border:none; background:none;">Delete</button>
+            </div>
+        `).join('');
+    }
+
+    function addProduct() { data.push({name: "New Item", img: "", link: "#"}); render(); }
+    function handleImage(input, i) {
+        const reader = new FileReader();
+        reader.onload = (e) => { data[i].img = e.target.result; render(); };
+        reader.readAsDataURL(input.files[0]);
+    }
+    function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
+    function saveAndClose() { localStorage.setItem('urbanCasaData', JSON.stringify(data)); toggleModal(false); render(); }
+    render();
+</script>
+
+</body>
+</html>
