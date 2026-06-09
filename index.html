@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>URBAN CASA - Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { background: #f4f7f6; padding-bottom: 30px; }
+        
+        header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: #2c3e50; color: #fff; }
+        .settings-btn { padding: 8px 15px; background: #e67e22; border-radius: 6px; font-size: 14px; font-weight: bold; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; }
+        .tile { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 3px 6px rgba(0,0,0,0.1); text-decoration: none; color: #333; }
+        .tile img { width: 100%; height: 110px; object-fit: cover; }
+        .tile p { padding: 8px; text-align: center; font-size: 14px; font-weight: 600; }
+
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 100; padding: 20px; overflow-y: auto; }
+        .edit-row { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #eee; }
+        .img-preview { width: 80px; height: 80px; background: #eee; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; cursor: pointer; border-radius: 8px; overflow: hidden; }
+        input[type="text"] { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>URBAN CASA</h1>
+    <div class="settings-btn" onclick="toggleModal(true)">Settings</div>
+</header>
+
+<div class="grid" id="tileGrid"></div>
+
+<div id="modal">
+    <h2>Edit Catalogue</h2>
+    <div id="editorInputs" style="margin-top:20px;"></div>
+    <button onclick="saveAndClose()" style="width:100%; padding:15px; background:#27ae60; color:#fff; border:none; border-radius:8px; font-size:16px;">Save Changes</button>
+</div>
+
+<script>
+    let data = JSON.parse(localStorage.getItem('catData')) || [
+        {name: "Kitchen", img: "", link: "#"},
+        {name: "Wardrobe", img: "", link: "#"}
+    ];
+
+    function render() {
+        const grid = document.getElementById('tileGrid');
+        grid.innerHTML = data.map(item => `
+            <a href="${item.link}" class="tile">
+                <img src="${item.img || 'https://via.placeholder.com/150'}">
+                <p>${item.name}</p>
+            </a>
+        `).join('');
+
+        const editor = document.getElementById('editorInputs');
+        editor.innerHTML = data.map((item, i) => `
+            <div class="edit-row">
+                <label>Tile Image (Tap to change):</label>
+                <div class="img-preview" onclick="document.getElementById('file-${i}').click()">
+                    <img src="${item.img || 'https://via.placeholder.com/80'}" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+                <input type="file" id="file-${i}" hidden accept="image/*" onchange="handleImage(this, ${i})">
+                <input type="text" value="${item.name}" placeholder="Name" oninput="data[${i}].name=this.value">
+                <input type="text" value="${item.link}" placeholder="Google Drive Link" oninput="data[${i}].link=this.value">
+            </div>
+        `).join('');
+    }
+
+    function handleImage(input, index) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            data[index].img = e.target.result;
+            render();
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function toggleModal(show) { document.getElementById('modal').style.display = show ? 'block' : 'none'; }
+    function saveAndClose() { localStorage.setItem('catData', JSON.stringify(data)); toggleModal(false); render(); }
+    
+    render();
+</script>
+
+</body>
+</html>
