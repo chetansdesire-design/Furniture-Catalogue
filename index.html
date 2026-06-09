@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>URBAN CASA | Catalogue</title>
+    <!-- Dependencies for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <style>
         :root {
-            --glass: rgba(255, 255, 255, 0.15);
+            --glass: rgba(255, 255, 255, 0.1);
             --glass-border: rgba(255, 255, 255, 0.2);
             --text: #ffffff;
         }
@@ -20,18 +24,17 @@
             padding-bottom: 50px;
         }
 
-        /* Header with Premium Branding */
         header { padding: 40px 20px 20px; text-align: center; }
         header h1 { font-size: 28px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 5px; }
         header p { font-size: 12px; opacity: 0.7; letter-spacing: 2px; text-transform: uppercase; }
         
-        .settings-btn { 
-            position: fixed; top: 20px; right: 20px; 
+        .floating-btns { position: fixed; top: 20px; right: 20px; display: flex; gap: 10px; }
+        .action-btn { 
             background: var(--glass); border: 1px solid var(--glass-border);
             padding: 10px; border-radius: 50%; cursor: pointer; backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; font-size: 10px; color: white;
         }
 
-        /* Glass Tiles */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
         .tile { 
             background: var(--glass); backdrop-filter: blur(15px);
@@ -43,8 +46,7 @@
         .tile img { width: 100%; height: 120px; object-fit: cover; }
         .tile p { padding: 10px; text-align: center; font-size: 13px; font-weight: 500; }
 
-        /* Modal Styles */
-        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; padding: 20px; overflow-y: auto; color: #333; }
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; padding: 20px; overflow-y: auto; color: #333; }
         .modal-content { background: white; padding: 20px; border-radius: 20px; }
         .edit-row { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
         input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; }
@@ -57,14 +59,17 @@
     <p>Timeless furniture for modern living</p>
 </header>
 
-<div class="settings-btn" onclick="toggleModal(true)">⚙️</div>
+<div class="floating-btns">
+    <div class="action-btn" onclick="exportPDF()">PDF</div>
+    <div class="action-btn" onclick="toggleModal(true)">⚙️</div>
+</div>
 
 <div class="grid" id="tileGrid"></div>
 
 <div id="modal">
     <div class="modal-content">
         <h2>Catalogue Manager</h2>
-        <div style="margin: 20px 0; padding: 15px; background: #eee; text-align: center; border-radius: 10px; font-weight: bold;" onclick="addProduct()">+ Add New Product</div>
+        <div style="margin: 20px 0; padding: 15px; background: #eee; text-align: center; border-radius: 10px; font-weight: bold; cursor: pointer;" onclick="addProduct()">+ Add New Product</div>
         <div id="editorInputs"></div>
         <button onclick="saveAndClose()" style="width:100%; padding:15px; background:#1a1a2e; color:white; border:none; border-radius:10px;">Save Changes</button>
     </div>
@@ -80,7 +85,7 @@
         const grid = document.getElementById('tileGrid');
         grid.innerHTML = data.map(item => `
             <a href="${item.link}" class="tile" target="_blank">
-                <img src="${item.img || 'https://via.placeholder.com/150'}">
+                <img src="${item.img || 'https://via.placeholder.com/150'}" crossorigin="anonymous">
                 <p>${item.name}</p>
             </a>
         `).join('');
@@ -88,15 +93,47 @@
         const editor = document.getElementById('editorInputs');
         editor.innerHTML = data.map((item, i) => `
             <div class="edit-row">
-                <div onclick="document.getElementById('file-${i}').click()" style="width: 60px; height: 60px; background: #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 5px;">
+                <div onclick="document.getElementById('file-${i}').click()" style="width: 60px; height: 60px; background: #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 5px; cursor: pointer;">
                     <img src="${item.img || ''}" style="width:100%; height:100%; object-fit:cover;">
                 </div>
                 <input type="file" id="file-${i}" hidden accept="image/*" onchange="handleImage(this, ${i})">
                 <input type="text" value="${item.name}" placeholder="Name" oninput="data[${i}].name=this.value">
                 <input type="text" value="${item.link}" placeholder="Google Drive Link" oninput="data[${i}].link=this.value">
-                <button onclick="data.splice(${i},1); render()" style="color:red; border:none; background:none;">Delete</button>
+                <button onclick="data.splice(${i},1); render()" style="color:red; border:none; background:none; cursor:pointer;">Delete</button>
             </div>
         `).join('');
+    }
+
+    async function exportPDF() {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        pdf.setFillColor(26, 26, 46); 
+        pdf.rect(0, 0, 210, 30, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(22);
+        pdf.text("URBAN CASA", 105, 15, { align: 'center' });
+        pdf.setFontSize(10);
+        pdf.text("Timeless furniture for modern living", 105, 22, { align: 'center' });
+
+        const grid = document.getElementById('tileGrid');
+        document.querySelector('.floating-btns').style.display = 'none';
+        
+        const canvas = await html2canvas(grid, { scale: 2, useCORS: true });
+        const imgData = canvas.toDataURL('image/png');
+        
+        const imgWidth = 180;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 15, 40, imgWidth, imgHeight);
+        
+        pdf.setTextColor(150, 150, 150);
+        pdf.setFontSize(8);
+        pdf.text("Generated by Urban Casa Digital Catalogue", 105, 290, { align: 'center' });
+        
+        pdf.save("UrbanCasa_Catalogue.pdf");
+        
+        document.querySelector('.floating-btns').style.display = 'flex';
     }
 
     function addProduct() { data.push({name: "New Item", img: "", link: "#"}); render(); }
