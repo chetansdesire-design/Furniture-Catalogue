@@ -2,50 +2,107 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URBAN CASA | Online</title>
-    </head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>URBAN CASA</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { --primary: #1a1a2e; --glass: rgba(255, 255, 255, 0.1); }
+        body { margin: 0; background: var(--primary); color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; padding-bottom: 60px; }
+        header { padding: 30px 20px; text-align: center; }
+        
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; }
+        .tile { background: var(--glass); border-radius: 16px; overflow: hidden; text-decoration: none; color: white; display: block; border: 1px solid rgba(255,255,255,0.1); }
+        .tile img { width: 100%; height: 140px; object-fit: cover; display: block; }
+        .tile p { padding: 10px; text-align: center; font-size: 14px; margin: 0; }
+        
+        .floating-btns { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px; }
+        .action-btn { background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); padding: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; }
+        
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 2000; padding: 20px; overflow-y: auto; color: #333; }
+        .modal-content { max-width: 500px; margin: auto; }
+        .edit-row { background: #f4f4f4; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+    </style>
+</head>
 <body>
-    <script>
-    const FIREBASE_URL = "https://furniture-catalogue-5beec-default-rtdb.firebaseio.com/catalogue.json";
+
+<header><h1>URBAN CASA</h1></header>
+
+<div class="floating-btns">
+    <div class="action-btn" onclick="exportPDF()">📄</div>
+    <div class="action-btn" onclick="toggleModal(true)">⚙️</div>
+</div>
+
+<div class="grid" id="tileGrid"></div>
+
+<div id="modal">
+    <div class="modal-content">
+        <h2>Catalogue Settings</h2>
+        <button id="addBtn" style="width:100%; padding:15px; background:#1a1a2e; color:#fff; border:none; border-radius:10px; font-size:16px;">+ Add Product</button>
+        <div id="editorInputs" style="margin-top:20px;"></div>
+        <button onclick="saveAndClose()" style="width:100%; padding:15px; background:#28a745; color:#fff; border:none; border-radius:10px; margin-top:10px;">Save & Sync</button>
+    </div>
+</div>
+
+<script>
+    const URL = "https://furniture-catalogue-5beec-default-rtdb.firebaseio.com/catalogue.json";
     let data = [];
 
-    // Load data from Firebase
-    async function loadData() {
-        try {
-            const response = await fetch(FIREBASE_URL);
-            const result = await response.json();
-            data = result || [];
-            render();
-        } catch (e) {
-            console.error("Error loading data:", e);
-        }
+    async function fetchData() {
+        const res = await fetch(URL);
+        const json = await res.json();
+        data = Array.isArray(json) ? json : [];
+        render();
     }
 
-    // Save data to Firebase
-    async function saveToFirebase() {
-        try {
-            await fetch(FIREBASE_URL, {
-                method: 'PUT',
-                body: JSON.stringify(data),
-                headers: {'Content-Type': 'application/json'}
-            });
-            alert("Catalogue saved to the cloud!");
-        } catch (e) {
-            console.error("Error saving data:", e);
-        }
+    function render() {
+        document.getElementById('tileGrid').innerHTML = data.map(item => `
+            <a href="${item.link}" class="tile" target="_blank">
+                <img src="${item.img}" onerror="this.src='https://via.placeholder.com/300'">
+                <p>${item.name}</p>
+            </a>
+        `).join('');
+
+        document.getElementById('editorInputs').innerHTML = data.map((item, i) => `
+            <div class="edit-row">
+                <input type="text" value="${item.name}" placeholder="Name" onchange="updateProduct(${i}, this.value)">
+                <input type="text" value="${item.link}" placeholder="Link" onchange="data[${i}].link=this.value">
+                <button onclick="deleteProduct(${i})" style="color:red; background:none; border:none; width:100%; padding:10px;">Delete</button>
+            </div>
+        `).join('');
     }
 
-    // Updated Save and Close
-    function saveAndClose() {
-        saveToFirebase();
+    async function updateProduct(i, val) {
+        data[i].name = val;
+        // Use a more reliable image pattern
+        data[i].img = `https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=400&q=80`;
+        render();
+    }
+
+    document.getElementById('addBtn').onclick = () => {
+        data.push({name: "New Furniture", img: "https://via.placeholder.com/300", link: "#"});
+        render();
+    };
+
+    function deleteProduct(i) { data.splice(i, 1); render(); }
+    function toggleModal(s) { document.getElementById('modal').style.display = s ? 'block' : 'none'; }
+
+    async function saveAndClose() {
+        await fetch(URL, { method: 'PUT', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'} });
         toggleModal(false);
+        alert("Synced to Cloud!");
     }
 
-    // Initial Load
-    loadData();
+    async function exportPDF() {
+        const { jsPDF } = window.jspdf;
+        const canvas = await html2canvas(document.getElementById('tileGrid'));
+        const pdf = new jsPDF();
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, 180, 0);
+        pdf.save("Catalogue.pdf");
+    }
 
-    // ... keep your existing render(), updateImage(), and exportPDF() functions ...
+    fetchData();
 </script>
 </body>
 </html>
