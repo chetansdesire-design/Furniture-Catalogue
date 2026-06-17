@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>URBAN CASA - ADMIN</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { --primary: #1a1a2e; --glass: rgba(255, 255, 255, 0.1); }
         body { margin: 0; background: var(--primary); color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; padding-bottom: 60px; }
@@ -28,8 +26,6 @@
         .btn-group { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
         .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; min-width: 120px;}
         .btn-delete { background: #ff4757; }
-        .btn-pdf-single { background: #0984e3; }
-        .btn-pdf-multi { background: #6c5ce7; }
         
         #pinOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
     </style>
@@ -76,7 +72,7 @@
 </div>
 
 <script>
-    const ADMIN_PIN = "1234"; 
+    const ADMIN_PIN = "1234"; // Do not forget to change this!
     
     const DATA_URL = "https://furniture-catalogue-5beec-default-rtdb.firebaseio.com/catalogue.json";
     const SETTINGS_URL = "https://furniture-catalogue-5beec-default-rtdb.firebaseio.com/settings.json";
@@ -104,21 +100,18 @@
         data = Array.isArray(json) ? json : [];
         if (settingsJson) appSettings = settingsJson;
         
-        // Populate Global Settings input
         document.getElementById('waNumberInput').value = appSettings.whatsapp || "";
         
         render();
     }
 
-    // --- AUTO SHARE FUNCTION ---
+    // --- UPDATED AUTO SHARE FUNCTION ---
     function shareCatalog() {
-        // Automatically grabs your website's main link (e.g. https://my-site.netlify.app)
-        const currentWebsiteUrl = window.location.origin;
+        const shortLink = "https://sl1nk.com/s7y2fj2";
         
-        // Prepares the WhatsApp message
-        const text = encodeURIComponent(`Hello! Check out our latest Urban Casa Furniture Catalogue here: ${currentWebsiteUrl}`);
+        // Professional pre-written message
+        const text = encodeURIComponent(`Hello! 🌟 Welcome to Urban Casa.\n\nWe have curated a selection of premium furniture pieces that match your style. You can explore our interactive, mobile-friendly collection here:\n\n👉 ${shortLink}\n\nSimply tap the 'Chat on WhatsApp' button under any product you like, and I will assist you immediately.`);
         
-        // Opens WhatsApp
         window.open(`https://wa.me/?text=${text}`, '_blank');
     }
 
@@ -150,8 +143,6 @@
                 <img src="${item.img}" class="img-preview" style="display: ${item.img ? 'block' : 'none'}; width: 100px; height: 100px; object-fit: cover; border-radius: 8px; margin-top: 10px; border: 1px solid #ddd;">
                 
                 <div class="btn-group" style="margin-top: 15px;">
-                    <button class="btn btn-pdf-single" onclick="exportSinglePDF(${i})">📄 Single PDF</button>
-                    <button class="btn btn-pdf-multi" onclick="createMultiPagePDF(${i})">📚 Multi PDF</button>
                     <button class="btn btn-delete" onclick="deleteProduct(${i})">🗑 Delete</button>
                 </div>
             </div>
@@ -179,121 +170,6 @@
                 render();
             }
         };
-    }
-
-    async function getWatermarkLogo() {
-        return new Promise((resolve) => {
-            const logoImg = new Image();
-            logoImg.src = "black logo.png"; 
-            logoImg.onload = () => resolve(logoImg);
-            logoImg.onerror = () => resolve(null); 
-        });
-    }
-
-    async function exportSinglePDF(index) {
-        const item = data[index];
-        const btn = event.target;
-        btn.innerText = "Generating...";
-
-        const card = document.createElement('div');
-        card.style.cssText = "width: 450px; height: 800px; background: #1a1a2e; color: white; padding: 30px; box-sizing: border-box; text-align: center; font-family: sans-serif; position: fixed; top: -9999px;";
-        card.innerHTML = `
-            <div style="margin-top: 30px;">
-                <div style="background: white; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                    <img src="black logo.png" style="width: 50px; object-fit: contain;">
-                </div>
-                <h1 style="margin-top: 15px; font-size: 32px; letter-spacing: 2px;">URBAN CASA</h1>
-            </div>
-            <div style="background: #fff; padding: 10px; border-radius: 16px; margin: 30px 0;">
-                <img src="${item.img}" style="width: 100%; height: 420px; object-fit: cover; border-radius: 8px;">
-            </div>
-            <h2 style="font-size: 30px; margin-bottom: 10px;">${item.name}</h2>
-            <p style="font-size: 18px; color: #a4b0be; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">Contact us to purchase</p>
-        `;
-        document.body.appendChild(card);
-        const canvas = await html2canvas(card, { scale: 2 });
-        document.body.removeChild(card);
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'mm', [108, 192]); 
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 108, 192);
-        pdf.save(`${item.name.replace(/\s+/g, '_')}_UrbanCasa.pdf`);
-        btn.innerText = "📄 Single PDF";
-    }
-
-    async function createMultiPagePDF(index) {
-        const item = data[index];
-        const btn = event.target;
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.multiple = true;
-        fileInput.accept = 'image/*';
-        
-        fileInput.onchange = async (e) => {
-            const files = e.target.files;
-            if (files.length === 0) return;
-            btn.innerText = "Generating...";
-            const logoImg = await getWatermarkLogo();
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', [108, 192]); 
-            
-            const coverCard = document.createElement('div');
-            coverCard.style.cssText = "width: 450px; height: 800px; background: #1a1a2e; color: white; padding: 30px; box-sizing: border-box; text-align: center; font-family: sans-serif; position: fixed; top: -9999px;";
-            coverCard.innerHTML = `
-                <div style="margin-top: 30px;">
-                    <div style="background: white; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                        <img src="black logo.png" style="width: 50px; object-fit: contain;">
-                    </div>
-                    <h1 style="margin-top: 15px; font-size: 32px; letter-spacing: 2px;">URBAN CASA</h1>
-                </div>
-                <div style="background: #fff; padding: 10px; border-radius: 16px; margin: 30px 0;">
-                    <img src="${item.img}" style="width: 100%; height: 420px; object-fit: cover; border-radius: 8px;">
-                </div>
-                <h2 style="font-size: 30px; margin-bottom: 10px;">${item.name}</h2>
-                <p style="font-size: 18px; color: #a4b0be; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">Contact us to purchase</p>
-            `;
-            document.body.appendChild(coverCard);
-            const coverCanvas = await html2canvas(coverCard, { scale: 2 });
-            document.body.removeChild(coverCard);
-            pdf.addImage(coverCanvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 108, 192);
-
-            for (let i = 0; i < files.length; i++) {
-                await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            pdf.addPage();
-                            const pdfWidth = 108;
-                            const pdfHeight = 192;
-                            const ratio = Math.min(pdfWidth / img.width, pdfHeight / img.height);
-                            const finalWidth = img.width * ratio;
-                            const finalHeight = img.height * ratio;
-                            const x = (pdfWidth - finalWidth) / 2; 
-                            const y = (pdfHeight - finalHeight) / 2; 
-                            pdf.setFillColor(26, 26, 46); 
-                            pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
-                            pdf.addImage(img, 'JPEG', x, y, finalWidth, finalHeight);
-
-                            if (logoImg) {
-                                const wSize = 12; 
-                                const padding = 2;
-                                const wX = pdfWidth - wSize - (padding * 2) - 5; 
-                                const wY = pdfHeight - wSize - (padding * 2) - 5; 
-                                pdf.setFillColor(255, 255, 255);
-                                pdf.roundedRect(wX, wY, wSize + (padding * 2), wSize + (padding * 2), 2, 2, 'F');
-                                pdf.addImage(logoImg, 'PNG', wX + padding, wY + padding, wSize, wSize);
-                            }
-                            resolve();
-                        };
-                        img.src = event.target.result;
-                    };
-                    reader.readAsDataURL(files[i]);
-                });
-            }
-            pdf.save(`${item.name.replace(/\s+/g, '_')}_Full_Catalogue.pdf`);
-            btn.innerText = "📚 Multi PDF";
-        };
-        fileInput.click();
     }
 
     document.getElementById('addBtn').onclick = () => {
