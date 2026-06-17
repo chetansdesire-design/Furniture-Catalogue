@@ -7,8 +7,14 @@
     <style>
         :root { --primary: #1a1a2e; }
         body { margin: 0; background: #f4f4f4; color: #333; font-family: sans-serif; padding: 20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .edit-row { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 10px; }
+        
+        /* Preview Grid */
+        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 40px; border-bottom: 2px solid #ccc; padding-bottom: 20px; }
+        .tile { background: #fff; border-radius: 10px; overflow: hidden; text-align: center; border: 1px solid #ddd; }
+        .tile img { width: 100%; height: 120px; object-fit: cover; display: block; }
+        
+        /* Editor Section */
+        .edit-row { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ddd; }
         input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         .btn-delete { background: #ff4757; color: white; border: none; padding: 10px; border-radius: 5px; width: 100%; cursor: pointer; }
         .btn-add { background: #1a1a2e; color: white; padding: 10px; border-radius: 5px; cursor: pointer; border: none; }
@@ -16,7 +22,10 @@
     </style>
 </head>
 <body>
-    <h1>Admin Panel</h1>
+    <h1>Catalogue Preview</h1>
+    <div class="preview-grid" id="tileGrid"></div>
+
+    <h1>Admin Editor</h1>
     <button id="addBtn" class="btn-add">+ Add Product</button>
     <div id="editorInputs" style="margin-top:20px;"></div>
     <button onclick="saveData()" class="btn-save">Save Changes to Cloud</button>
@@ -32,6 +41,15 @@
         }
 
         function render() {
+            // Render Preview Grid
+            document.getElementById('tileGrid').innerHTML = data.map(item => `
+                <div class="tile">
+                    <img src="${item.img || 'https://via.placeholder.com/300'}" onerror="this.src='https://via.placeholder.com/300'">
+                    <p style="padding: 5px; font-size: 12px;">${item.name || 'New Product'}</p>
+                </div>
+            `).join('');
+
+            // Render Editor Inputs
             document.getElementById('editorInputs').innerHTML = data.map((item, i) => `
                 <div class="edit-row">
                     <input type="text" value="${item.name || ''}" onchange="data[${i}].name=this.value" placeholder="Name">
@@ -47,14 +65,13 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (ev) => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 400; canvas.height = 300;
-                canvas.getContext('2d').drawImage(ev.target.result, 0, 0, 400, 300);
-                // Note: The image object needs to be loaded into the image element correctly
                 const img = new Image();
                 img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 400; canvas.height = 300;
                     canvas.getContext('2d').drawImage(img, 0, 0, 400, 300);
                     data[i].img = canvas.toDataURL('image/jpeg', 0.6);
+                    render(); // Refresh to show new image in preview
                 };
                 img.src = ev.target.result;
             };
