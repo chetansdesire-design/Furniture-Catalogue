@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>URBAN CASA</title>
+    <title>URBAN CASA - ADMIN</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
@@ -11,98 +11,318 @@
         body { margin: 0; background: var(--primary); color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; padding-bottom: 60px; }
         header { padding: 30px 20px; text-align: center; }
         
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; }
-        .tile { background: var(--glass); border-radius: 16px; overflow: hidden; text-decoration: none; color: white; display: block; border: 1px solid rgba(255,255,255,0.1); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; padding: 12px; max-width: 800px; margin: auto; }
+        .tile { background: var(--glass); border-radius: 16px; overflow: hidden; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
         .tile img { width: 100%; height: 140px; object-fit: cover; display: block; }
-        .tile p { padding: 10px; text-align: center; font-size: 14px; margin: 0; }
+        .tile p { padding: 10px; font-size: 14px; margin: 0; }
         
         .floating-btns { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 10px; }
-        .action-btn { background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); padding: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; }
+        .action-btn { background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); padding: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; font-weight: bold; }
         
-        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 2000; padding: 20px; overflow-y: auto; color: #333; }
-        .modal-content { max-width: 500px; margin: auto; }
-        .edit-row { background: #f4f4f4; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f9f9f9; z-index: 2000; padding: 20px; overflow-y: auto; color: #333; box-sizing: border-box; }
+        .modal-content { max-width: 600px; margin: auto; padding-bottom: 40px; }
+        .edit-row { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        input[type="file"] { margin: 10px 0; width: 100%; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; min-width: 120px;}
+        .btn-delete { background: #ff4757; }
+        .btn-pdf-single { background: #0984e3; }
+        .btn-pdf-multi { background: #6c5ce7; }
+        
+        #pinOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; }
     </style>
 </head>
 <body>
 
-<header><h1>URBAN CASA</h1></header>
+<div id="pinOverlay">
+    <h2>Admin Login</h2>
+    <input type="password" id="pinInput" placeholder="Enter PIN" style="text-align: center; font-size: 24px; width: 200px; margin-bottom: 15px;">
+    <button onclick="checkPin()" style="padding: 15px 40px; background: #2ed573; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px;">Unlock</button>
+    <p id="pinError" style="color: #ff4757; display: none; margin-top: 15px; font-weight: bold;">Incorrect PIN</p>
+</div>
+
+<header><h1>URBAN CASA (Admin)</h1></header>
 
 <div class="floating-btns">
-    <div class="action-btn" onclick="exportPDF()">📄</div>
-    <div class="action-btn" onclick="toggleModal(true)">⚙️</div>
+    <div class="action-btn" onclick="shareCatalog()" style="background: #25D366; color: white; border-color: #25D366;">📲 Share Link</div>
+    <div class="action-btn" onclick="toggleModal(true)">⚙️ Settings</div>
 </div>
 
 <div class="grid" id="tileGrid"></div>
 
 <div id="modal">
     <div class="modal-content">
-        <h2>Catalogue Settings</h2>
-        <button id="addBtn" style="width:100%; padding:15px; background:#1a1a2e; color:#fff; border:none; border-radius:10px; font-size:16px;">+ Add Product</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">Catalogue Settings</h2>
+            <button onclick="toggleModal(false)" style="padding: 10px; background: none; border: none; font-size: 20px; cursor: pointer;">❌</button>
+        </div>
+        
+        <div style="background: #eef2f5; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #dcdde1;">
+            <h3 style="margin-top:0; color: #1a1a2e; font-size: 18px;">🌍 Global App Settings</h3>
+            <p style="font-size: 12px; color: #666; margin-top: 0;">This number will be used when customers tap "Chat on WhatsApp".</p>
+            
+            <label style="font-size: 12px; color: #555; font-weight: bold; text-transform: uppercase;">Customer Care Number (Country Code + Number)</label>
+            <input type="text" id="waNumberInput" placeholder="e.g., 919876543210" onchange="appSettings.whatsapp = this.value">
+        </div>
+
+        <button id="addBtn" style="width:100%; padding:15px; background:#1a1a2e; color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:bold; cursor:pointer;">+ Add New Product Folder</button>
+        
         <div id="editorInputs" style="margin-top:20px;"></div>
-        <button onclick="saveAndClose()" style="width:100%; padding:15px; background:#28a745; color:#fff; border:none; border-radius:10px; margin-top:10px;">Save & Sync</button>
+        
+        <button onclick="saveAndClose()" style="width:100%; padding:15px; background:#2ed573; color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:bold; margin-top:20px; cursor:pointer;">Save Changes to Cloud</button>
     </div>
 </div>
 
 <script>
-    const URL = "https://furniture-catalogue-5beec-default-rtdb.firebaseio.com/catalogue.json";
+    const ADMIN_PIN = "1234"; 
+    
+    const DATA_URL = "https://furniture-catalogue-5beec-default-rtdb.firebaseio.com/catalogue.json";
+    const SETTINGS_URL = "https://furniture-catalogue-5beec-default-rtdb.firebaseio.com/settings.json";
+    
     let data = [];
+    let appSettings = { whatsapp: "" };
+
+    function checkPin() {
+        const input = document.getElementById('pinInput').value;
+        if(input === ADMIN_PIN) {
+            document.getElementById('pinOverlay').style.display = 'none'; 
+            fetchData(); 
+        } else {
+            document.getElementById('pinError').style.display = 'block'; 
+            document.getElementById('pinInput').value = ''; 
+        }
+    }
 
     async function fetchData() {
-        const res = await fetch(URL);
-        const json = await res.json();
+        const [dataRes, settingsRes] = await Promise.all([fetch(DATA_URL), fetch(SETTINGS_URL)]);
+        
+        const json = await dataRes.json();
+        const settingsJson = await settingsRes.json();
+        
         data = Array.isArray(json) ? json : [];
+        if (settingsJson) appSettings = settingsJson;
+        
+        // Populate Global Settings input
+        document.getElementById('waNumberInput').value = appSettings.whatsapp || "";
+        
         render();
+    }
+
+    // --- AUTO SHARE FUNCTION ---
+    function shareCatalog() {
+        // Automatically grabs your website's main link (e.g. https://my-site.netlify.app)
+        const currentWebsiteUrl = window.location.origin;
+        
+        // Prepares the WhatsApp message
+        const text = encodeURIComponent(`Hello! Check out our latest Urban Casa Furniture Catalogue here: ${currentWebsiteUrl}`);
+        
+        // Opens WhatsApp
+        window.open(`https://wa.me/?text=${text}`, '_blank');
     }
 
     function render() {
         document.getElementById('tileGrid').innerHTML = data.map(item => `
-            <a href="${item.link}" class="tile" target="_blank">
-                <img src="${item.img}" onerror="this.src='https://via.placeholder.com/300'">
-                <p>${item.name}</p>
+            <a href="${item.link}" target="_blank" style="text-decoration: none; color: inherit;">
+                <div class="tile">
+                    <img src="${item.img}" onerror="this.src='https://via.placeholder.com/300?text=No+Cover+Image'">
+                    <p>${item.name}</p>
+                </div>
             </a>
         `).join('');
 
         document.getElementById('editorInputs').innerHTML = data.map((item, i) => `
             <div class="edit-row">
-                <input type="text" value="${item.name}" placeholder="Name" onchange="updateProduct(${i}, this.value)">
-                <input type="text" value="${item.link}" placeholder="Link" onchange="data[${i}].link=this.value">
-                <button onclick="deleteProduct(${i})" style="color:red; background:none; border:none; width:100%; padding:10px;">Delete</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="font-size: 18px; color:#333;">📁 Product Folder ${i + 1}</strong>
+                </div>
+                
+                <label style="font-size: 12px; color: #888; font-weight: bold; text-transform: uppercase;">Folder / Product Name</label>
+                <input type="text" value="${item.name}" placeholder="e.g., Luxury Sofa Set" onchange="data[${i}].name=this.value">
+                
+                <label style="font-size: 12px; color: #888; font-weight: bold; text-transform: uppercase; margin-top: 10px; display: block;">🔗 Google Drive Link</label>
+                <input type="text" value="${item.link}" placeholder="Paste Google Drive Link here..." onchange="data[${i}].link=this.value">
+                
+                <label style="font-size: 12px; color: #888; font-weight: bold; text-transform: uppercase; margin-top: 10px; display: block;">🖼️ Cover Image</label>
+                <input type="file" accept="image/*" onchange="handleImageUpload(event, ${i})">
+                
+                <img src="${item.img}" class="img-preview" style="display: ${item.img ? 'block' : 'none'}; width: 100px; height: 100px; object-fit: cover; border-radius: 8px; margin-top: 10px; border: 1px solid #ddd;">
+                
+                <div class="btn-group" style="margin-top: 15px;">
+                    <button class="btn btn-pdf-single" onclick="exportSinglePDF(${i})">📄 Single PDF</button>
+                    <button class="btn btn-pdf-multi" onclick="createMultiPagePDF(${i})">📚 Multi PDF</button>
+                    <button class="btn btn-delete" onclick="deleteProduct(${i})">🗑 Delete</button>
+                </div>
             </div>
         `).join('');
     }
 
-    async function updateProduct(i, val) {
-        data[i].name = val;
-        // Use a more reliable image pattern
-        data[i].img = `https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=400&q=80`;
-        render();
+    function handleImageUpload(event, index) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 600;
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                data[index].img = canvas.toDataURL('image/jpeg', 0.7);
+                render();
+            }
+        };
+    }
+
+    async function getWatermarkLogo() {
+        return new Promise((resolve) => {
+            const logoImg = new Image();
+            logoImg.src = "black logo.png"; 
+            logoImg.onload = () => resolve(logoImg);
+            logoImg.onerror = () => resolve(null); 
+        });
+    }
+
+    async function exportSinglePDF(index) {
+        const item = data[index];
+        const btn = event.target;
+        btn.innerText = "Generating...";
+
+        const card = document.createElement('div');
+        card.style.cssText = "width: 450px; height: 800px; background: #1a1a2e; color: white; padding: 30px; box-sizing: border-box; text-align: center; font-family: sans-serif; position: fixed; top: -9999px;";
+        card.innerHTML = `
+            <div style="margin-top: 30px;">
+                <div style="background: white; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                    <img src="black logo.png" style="width: 50px; object-fit: contain;">
+                </div>
+                <h1 style="margin-top: 15px; font-size: 32px; letter-spacing: 2px;">URBAN CASA</h1>
+            </div>
+            <div style="background: #fff; padding: 10px; border-radius: 16px; margin: 30px 0;">
+                <img src="${item.img}" style="width: 100%; height: 420px; object-fit: cover; border-radius: 8px;">
+            </div>
+            <h2 style="font-size: 30px; margin-bottom: 10px;">${item.name}</h2>
+            <p style="font-size: 18px; color: #a4b0be; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">Contact us to purchase</p>
+        `;
+        document.body.appendChild(card);
+        const canvas = await html2canvas(card, { scale: 2 });
+        document.body.removeChild(card);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', [108, 192]); 
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 108, 192);
+        pdf.save(`${item.name.replace(/\s+/g, '_')}_UrbanCasa.pdf`);
+        btn.innerText = "📄 Single PDF";
+    }
+
+    async function createMultiPagePDF(index) {
+        const item = data[index];
+        const btn = event.target;
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.multiple = true;
+        fileInput.accept = 'image/*';
+        
+        fileInput.onchange = async (e) => {
+            const files = e.target.files;
+            if (files.length === 0) return;
+            btn.innerText = "Generating...";
+            const logoImg = await getWatermarkLogo();
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', [108, 192]); 
+            
+            const coverCard = document.createElement('div');
+            coverCard.style.cssText = "width: 450px; height: 800px; background: #1a1a2e; color: white; padding: 30px; box-sizing: border-box; text-align: center; font-family: sans-serif; position: fixed; top: -9999px;";
+            coverCard.innerHTML = `
+                <div style="margin-top: 30px;">
+                    <div style="background: white; width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                        <img src="black logo.png" style="width: 50px; object-fit: contain;">
+                    </div>
+                    <h1 style="margin-top: 15px; font-size: 32px; letter-spacing: 2px;">URBAN CASA</h1>
+                </div>
+                <div style="background: #fff; padding: 10px; border-radius: 16px; margin: 30px 0;">
+                    <img src="${item.img}" style="width: 100%; height: 420px; object-fit: cover; border-radius: 8px;">
+                </div>
+                <h2 style="font-size: 30px; margin-bottom: 10px;">${item.name}</h2>
+                <p style="font-size: 18px; color: #a4b0be; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px;">Contact us to purchase</p>
+            `;
+            document.body.appendChild(coverCard);
+            const coverCanvas = await html2canvas(coverCard, { scale: 2 });
+            document.body.removeChild(coverCard);
+            pdf.addImage(coverCanvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 108, 192);
+
+            for (let i = 0; i < files.length; i++) {
+                await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            pdf.addPage();
+                            const pdfWidth = 108;
+                            const pdfHeight = 192;
+                            const ratio = Math.min(pdfWidth / img.width, pdfHeight / img.height);
+                            const finalWidth = img.width * ratio;
+                            const finalHeight = img.height * ratio;
+                            const x = (pdfWidth - finalWidth) / 2; 
+                            const y = (pdfHeight - finalHeight) / 2; 
+                            pdf.setFillColor(26, 26, 46); 
+                            pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
+                            pdf.addImage(img, 'JPEG', x, y, finalWidth, finalHeight);
+
+                            if (logoImg) {
+                                const wSize = 12; 
+                                const padding = 2;
+                                const wX = pdfWidth - wSize - (padding * 2) - 5; 
+                                const wY = pdfHeight - wSize - (padding * 2) - 5; 
+                                pdf.setFillColor(255, 255, 255);
+                                pdf.roundedRect(wX, wY, wSize + (padding * 2), wSize + (padding * 2), 2, 2, 'F');
+                                pdf.addImage(logoImg, 'PNG', wX + padding, wY + padding, wSize, wSize);
+                            }
+                            resolve();
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(files[i]);
+                });
+            }
+            pdf.save(`${item.name.replace(/\s+/g, '_')}_Full_Catalogue.pdf`);
+            btn.innerText = "📚 Multi PDF";
+        };
+        fileInput.click();
     }
 
     document.getElementById('addBtn').onclick = () => {
-        data.push({name: "New Furniture", img: "https://via.placeholder.com/300", link: "#"});
+        data.unshift({name: "New Folder", img: "", link: "#"}); 
         render();
     };
 
-    function deleteProduct(i) { data.splice(i, 1); render(); }
+    function deleteProduct(i) { 
+        if(confirm("Are you sure you want to delete this folder?")) {
+            data.splice(i, 1); 
+            render(); 
+        }
+    }
+    
     function toggleModal(s) { document.getElementById('modal').style.display = s ? 'block' : 'none'; }
 
     async function saveAndClose() {
-        await fetch(URL, { method: 'PUT', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'} });
+        const btn = event.target;
+        btn.innerText = "Saving...";
+        
+        await Promise.all([
+            fetch(DATA_URL, { method: 'PUT', body: JSON.stringify(data), headers: {'Content-Type': 'application/json'} }),
+            fetch(SETTINGS_URL, { method: 'PUT', body: JSON.stringify(appSettings), headers: {'Content-Type': 'application/json'} })
+        ]);
+        
+        btn.innerText = "Save Changes to Cloud";
         toggleModal(false);
-        alert("Synced to Cloud!");
+        alert("Synced to Cloud successfully!");
     }
-
-    async function exportPDF() {
-        const { jsPDF } = window.jspdf;
-        const canvas = await html2canvas(document.getElementById('tileGrid'));
-        const pdf = new jsPDF();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, 180, 0);
-        pdf.save("Catalogue.pdf");
-    }
-
-    fetchData();
 </script>
 </body>
 </html>
